@@ -11,13 +11,16 @@ def get_all_users(x_user_role: Annotated[str, Header()]):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Hanya admin yang bisa mengakses resource ini")
     return db_users
 
+
 @router.get("/users/{user_id}", response_model=UserResponse, tags=["Users"])
 def get_user_by_id(user_id: int, x_user_role: Annotated[str, Header()], x_user_id: Annotated[int, Header()]):
+    # 1. Cek otorisasi TERLEBIH DAHULU
+    if x_user_role == "staff" and user_id != x_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Anda tidak punya hak akses untuk melihat data user lain")
+    
+    # 2. Baru cari user di database setelah lolos otorisasi
     user = next((u for u in db_users if u.id == user_id), None)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User tidak ditemukan")
-
-    if x_user_role == "staff" and user.id != x_user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Anda tidak punya hak akses")
     
     return user
